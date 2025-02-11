@@ -1,0 +1,53 @@
+import requests
+import pandas as pd
+
+def fetch_crypto_data():
+    url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=false"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return data
+    else:
+        print("Failed to fetch data")
+        return None
+
+crypto_data = fetch_crypto_data()
+def process_data(data):
+    df = pd.DataFrame(data)
+    df = df[['id', 'symbol', 'name', 'current_price', 'market_cap', 'total_volume', 'price_change_percentage_24h']]
+
+    df.columns = ['ID', 'Symbol', 'Name', 'Price (USD)', 'Market Cap (USD)', '24h Volume (USD)', '24h Price Change (%)']
+    return df
+
+crypto_df = process_data(crypto_data)
+print(crypto_df.head())
+def save_to_excel(df, filename="crypto_data.xlsx"):
+    df.to_excel(filename, index=False)
+    print(f"Data saved to {filename}")
+
+# Save data to Excel
+save_to_excel(crypto_df)
+import time
+
+def live_update(interval=300):  # Update every 5 minutes (300 seconds)
+    while True:
+        crypto_data = fetch_crypto_data()
+        if crypto_data:
+            crypto_df = process_data(crypto_data)
+            save_to_excel(crypto_df)
+            print(f"Data updated at {time.ctime()}")
+        time.sleep(interval)
+
+# Start live updates
+live_update()
+from openpyxl import Workbook
+from openpyxl.styles import Font
+
+def format_excel(filename="crypto_data.xlsx"):
+    wb = Workbook()
+    ws = wb.active
+    # Add headers and format
+    for col in ws.iter_cols(1, ws.max_column):
+        col[0].font = Font(bold=True)
+    wb.save(filename)
+    
